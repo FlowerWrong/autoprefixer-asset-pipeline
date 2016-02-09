@@ -58,7 +58,11 @@ class AutoprefixerProcessor extends AbstractProcessor {
                 def result = cx.evaluateString(compileScope, "autoprefixer.process(lessSrc${browsers ? ", $browsers" : ''}).css", "autoprefix command", 0, null)
                 return result.toString()
             } catch (Exception e) {
-                throw new Exception("Autoprefixing failed: $e")
+                if (config.failOnError == false) {
+                    println e
+                } else {
+                    throw new Exception("Autoprefixing failed: $e")
+                }
             } finally {
                 Context.exit()
             }
@@ -67,7 +71,7 @@ class AutoprefixerProcessor extends AbstractProcessor {
         }
     }
 
-    static def getConfig(){
+    static def getConfig() {
         AssetPipelineConfigHolder.config?.autoprefixer
     }
 
