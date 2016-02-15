@@ -5,24 +5,27 @@ import asset.pipeline.AssetCompiler
 import asset.pipeline.AssetFile
 import asset.pipeline.AssetPipelineConfigHolder
 import com.google.gson.Gson
-import groovy.util.logging.Log4j
-import org.mozilla.javascript.Context
-import org.mozilla.javascript.Scriptable
+import groovy.util.logging.Commons
+import org.mozilla.javascript.*
 
-@Log4j
+@Commons
 class AutoprefixerProcessor extends AbstractProcessor {
 
-    public static final ThreadLocal threadLocal = new ThreadLocal();
+    public static final ThreadLocal threadLocal = new ThreadLocal()
+    public static final ThreadLocal localCompiler = new ThreadLocal()
+    public static final ThreadLocal resultsMap = new ThreadLocal()
+
+    Scriptable globalScope
+    ClassLoader classLoader
 
     boolean enabled = true
-    static Scriptable globalScope
-    static boolean contextInitialized = false
     def browsers
 
     AutoprefixerProcessor(AssetCompiler precompiler) {
         super(precompiler)
+
         if (config?.enabled == false) {
-            log.info "disabling autoprefixer"
+            log.info 'Disabling Autoprefixer'
             enabled = false
             return
         }
@@ -30,45 +33,89 @@ class AutoprefixerProcessor extends AbstractProcessor {
             browsers = new Gson().toJson(config.browsers)
         }
 
-        if (!contextInitialized) {
-            ClassLoader classLoader = this.class.classLoader
+        try {
+            classLoader = getClass().getClassLoader()
+
             def shellJsResource = classLoader.getResource('asset/pipeline/autoprefixer/shell.js')
-            def autoprefixerJsResource = classLoader.getResource('asset/pipeline/autoprefixer/autoprefixer.js')
             def envRhinoJsResource = classLoader.getResource('asset/pipeline/autoprefixer/env.rhino.js')
+            def autoprefixerJsResource = classLoader.getResource('asset/pipeline/autoprefixer/autoprefixer.js')
+            def compileJsResource = classLoader.getResource('asset/pipeline/autoprefixer/compile.js')
             Context cx = Context.enter()
+
             cx.setOptimizationLevel(-1)
             globalScope = cx.initStandardObjects()
-            cx.evaluateString(globalScope, shellJsResource.getText('UTF-8'), shellJsResource.file, 1, null)
-            cx.evaluateString(globalScope, envRhinoJsResource.getText('UTF-8'), envRhinoJsResource.file, 1, null)
-            cx.evaluateString(globalScope, autoprefixerJsResource.getText('UTF-8'), autoprefixerJsResource.file, 1, null)
-            contextInitialized = true
+            this.evaluateJavascript(cx, shellJsResource)
+            this.evaluateJavascript(cx, envRhinoJsResource)
+            this.evaluateJavascript(cx, autoprefixerJsResource)
+            this.evaluateJavascript(cx, compileJsResource)
+        } catch (Exception e) {
+            throw new Exception("Autoprefixer initialization failed.", e)
+        } finally {
+            try {
+                Context.exit()
+            } catch (IllegalStateException e) {
+            }
         }
     }
 
-    String process(String input, AssetFile assetFile) {
-        if (enabled) {
-            log.info("prefixing $assetFile.name")
-            try {
-                threadLocal.set(assetFile);
+    def evaluateJavascript(context, resource) {
+        // def inputStream = resource.inputStream
+        context.evaluateString globalScope, resource.getText('UTF-8'), resource.file, 1, null
+    }
 
-                def cx = Context.enter()
-                def compileScope = cx.newObject(globalScope)
-                compileScope.setParentScope(globalScope)
-                compileScope.put("lessSrc", compileScope, input)
-                def result = cx.evaluateString(compileScope, "autoprefixer.process(lessSrc${browsers ? ", $browsers" : ''}).css", "autoprefix command", 0, null)
-                return result.toString()
-            } catch (Exception e) {
-                if (config?.failOnError == false) {
-                    println e
-                } else {
-                    throw new Exception("Autoprefixing failed: $e")
-                }
-            } finally {
-                Context.exit()
+    String process(String input, AssetFile assetFile) {
+        try {
+            threadLocal.set(assetFile);
+            localCompiler.set(precompiler)
+            resultsMap.set(null);
+
+            def cx = Context.enter()
+            def compileScope = cx.newObject(globalScope)
+            compileScope.setParentScope(globalScope)
+            compileScope.put('cssSourceContent', compileScope, input)
+
+            cx.evaluateString(compileScope, "compile(cssSourceContent, ['assets'])", 'Autoprefix command', 0, null)
+            while (resultsMap.get() == null) {
+                Thread.sleep(5)
             }
-        } else {
-            return input
+
+            def results = resultsMap.get();
+            if (!results.get('success')) {
+                println "Error Processing Results ${results.get('error')}";
+                return ''
+            } else {
+                return results.get('css').toString();
+            }
+            // return result.toString()
+        } catch (JavaScriptException e) {
+            NativeObject errorMeta = (NativeObject) e.value
+
+            def errorDetails = "Autoprefixer Compiler Failed - ${assetFile.path}.\n"
+            if (precompiler) {
+                errorDetails += "**Did you mean to compile this file individually (check docs on exclusion)?**\n"
+            }
+            if (errorMeta && errorMeta.get('message')) {
+
+                errorDetails += " -- ${errorMeta.get('message')} Near Line: ${errorMeta.line}, Column: ${errorMeta.column}\n"
+            }
+            if (errorMeta != null && errorMeta.get('extract') != null) {
+                List extractArray = (NativeArray) errorMeta.get('extract')
+                errorDetails += "    --------------------------------------------\n"
+                extractArray.each { error ->
+                    errorDetails += "    ${error}\n"
+                }
+                errorDetails += "    --------------------------------------------\n\n"
+            }
+
+            if (config?.failOnError == false) {
+                println errorDetails
+            } else {
+                throw new Exception(errorDetails, e)
+            }
+        } finally {
+            Context.exit()
         }
+        return input
     }
 
     static def getConfig() {
@@ -76,7 +123,15 @@ class AutoprefixerProcessor extends AbstractProcessor {
     }
 
     static void print(text) {
-        log.debug text
+        println text
+    }
+
+    static void error(text) {
+        log.error('Autoprefixer Compile Error: ' + text)
+    }
+
+    static void setResults(NativeObject resultObject) {
+        resultsMap.set(resultObject);
     }
 
 }

@@ -1,4 +1,5 @@
 function print(text) {
-	// Packages.asset.pipeline.autoprefixer.AutoprefixerProcessor.print(text);
+    Packages.asset.pipeline.autoprefixer.AutoprefixerProcessor.print(text);
 }
-function quit() {}
+function quit() {
+}
