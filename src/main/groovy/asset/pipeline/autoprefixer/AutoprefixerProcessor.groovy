@@ -13,7 +13,6 @@ class AutoprefixerProcessor extends AbstractProcessor {
 
     public static final ThreadLocal threadLocal = new ThreadLocal()
     public static final ThreadLocal localCompiler = new ThreadLocal()
-    public static final ThreadLocal resultsMap = new ThreadLocal()
 
     Scriptable globalScope
     ClassLoader classLoader
@@ -67,26 +66,15 @@ class AutoprefixerProcessor extends AbstractProcessor {
         try {
             threadLocal.set(assetFile);
             localCompiler.set(precompiler)
-            resultsMap.set(null);
 
             def cx = Context.enter()
             def compileScope = cx.newObject(globalScope)
             compileScope.setParentScope(globalScope)
             compileScope.put('cssSourceContent', compileScope, input)
 
-            cx.evaluateString(compileScope, "compile(cssSourceContent, ['assets'])", 'Autoprefix command', 0, null)
-            while (resultsMap.get() == null) {
-                Thread.sleep(5)
-            }
+            def result = cx.evaluateString(compileScope, "compile(cssSourceContent, ['assets'])", 'Autoprefix command', 0, null)
 
-            def results = resultsMap.get();
-            if (!results.get('success')) {
-                println "Error Processing Results ${results.get('error')}";
-                return ''
-            } else {
-                return results.get('css').toString();
-            }
-            // return result.toString()
+            return result.toString()
         } catch (JavaScriptException e) {
             NativeObject errorMeta = (NativeObject) e.value
 
@@ -128,10 +116,6 @@ class AutoprefixerProcessor extends AbstractProcessor {
 
     static void error(text) {
         log.error('Autoprefixer Compile Error: ' + text)
-    }
-
-    static void setResults(NativeObject resultObject) {
-        resultsMap.set(resultObject);
     }
 
 }
