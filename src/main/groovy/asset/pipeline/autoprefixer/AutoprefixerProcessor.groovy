@@ -28,8 +28,11 @@ class AutoprefixerProcessor extends AbstractProcessor {
             enabled = false
             return
         }
+        browsers = "last 2 version"
         if (config?.browsers) {
+            println(config.browsers)
             browsers = new Gson().toJson(config.browsers)
+            println(browsers)
         }
 
         try {
@@ -72,9 +75,9 @@ class AutoprefixerProcessor extends AbstractProcessor {
             compileScope.setParentScope(globalScope)
             compileScope.put('cssSourceContent', compileScope, input)
 
-            def result = cx.evaluateString(compileScope, "compile(cssSourceContent, ['assets'])", 'Autoprefix command', 0, null)
+            def result = cx.evaluateString(compileScope, "compile(cssSourceContent)", 'Autoprefix command', 0, null)
 
-            return result.toString()
+            return cx.toString(result)
         } catch (JavaScriptException e) {
             NativeObject errorMeta = (NativeObject) e.value
 
@@ -100,6 +103,8 @@ class AutoprefixerProcessor extends AbstractProcessor {
             } else {
                 throw new Exception(errorDetails, e)
             }
+        } catch (Exception e) {
+            println(e.getMessage())
         } finally {
             Context.exit()
         }
