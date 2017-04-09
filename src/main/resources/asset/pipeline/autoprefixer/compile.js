@@ -2,7 +2,7 @@ var compile = function (fileText, paths) {
     var me = this;
     globalPaths = paths;
 
-    var outputCss = autoprefixer.process(fileText).css;
+    var outputCss = autoprefixer.process(fileText, {browsers: ['> 1%', 'ie 10']}).css;
 
     return outputCss;
 };

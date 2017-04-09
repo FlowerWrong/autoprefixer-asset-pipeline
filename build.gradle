@@ -2,8 +2,15 @@ buildscript {
     repositories {
         mavenLocal()
         maven {
-          url "https://plugins.gradle.org/m2/"
+            url "https://plugins.gradle.org/m2/"
         }
+    }
+
+    dependencies {
+        /* Replace "%%VERSION%%" with the version of JRuby/Gradle you wish to
+         * use if you want to use this build.gradle outside of gradleTest
+         */
+        classpath 'com.github.jruby-gradle:jruby-gradle-plugin:1.4.0'
     }
 }
 
@@ -22,6 +29,9 @@ apply plugin: 'maven-publish'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 
+apply plugin: "com.github.jruby-gradle.base"
+import com.github.jrubygradle.JRubyExec
+
 ext {
     gradleWrapperVersion = project.gradleWrapperVersion
     isReleaseVersion = !version.endsWith('SNAPSHOT')
@@ -33,7 +43,7 @@ targetCompatibility = 1.8
 repositories {
     mavenLocal()
     maven {
-      url "https://plugins.gradle.org/m2/"
+        url "https://plugins.gradle.org/m2/"
     }
     jcenter()
     mavenCentral()
@@ -51,6 +61,9 @@ sourceSets {
 
 dependencies {
     provided 'org.codehaus.groovy:groovy-all:2.4.10'
+    // https://mvnrepository.com/artifact/org.jruby/jruby
+    compile group: 'org.jruby', name: 'jruby', version: '9.1.8.0'
+    compile group: 'org.jruby', name: 'jruby-complete', version: '9.1.8.0'
 
     compile 'org.codehaus.groovy:groovy:2.4.10'
     compile 'com.bertramlabs.plugins:asset-pipeline-core:2.14.1'
@@ -63,72 +76,13 @@ dependencies {
 
     testCompile group: 'org.spockframework', name: 'spock-core', version: '1.1-groovy-2.4-rc-4'
 
+    jrubyExec "rubygems:autoprefixer-rails:6.7.7.1+"
 }
 
-/*
-publishing {
-    publications {
-        maven(MavenPublication) {
-            artifactId 'add'
-            pom.withXml {
-                asNode().children().last() + {
-                    resolveStrategy = Closure.DELEGATE_FIRST
-                    name 'autoprefixer-asset-pipeline'
-                    description 'Provides CSS autprefixing support for the Asset-Pipeline library.'
-                    groupId group
-                    artifactId artifact
-                    version versino
-                    url 'https://github.com/uberall/autoprefixer-asset-pipeline'
-                    scm {
-                        url 'https://github.com/uberall/autoprefixer-asset-pipeline'
-                        connection 'scm:https://uberall@github.com/uberall/autoprefixer-asset-pipeline.git'
-                        developerConnection 'scm:git://github.com/uberall/autoprefixer-asset-pipeline.git'
-                    }
-                    licenses {
-                        license {
-                            name 'The Apache Software License, Version 2.0'
-                            url 'http://www.apache.org/license/LICENSE-2.0.txt'
-                            distribution 'repo'
-                        }
-                    }
-                    developers {
-                        developer {
-                            id 'peh'
-                            name 'Philipp Eschenbach'
-                            email 'philipp@uberall.com'
-                        }
-                    }
-                }
-            }
-            from components.java
-            artifact sourcesJar
-            artifact javadocJar
-        }
-    }
-    // repositories {
-    //     maven {
-    //         // change to point to your repo, e.g. http://my.org/repo
-    //         url "https://github.com/uberall/uberall-plugins/raw/mvn-repo/"
-    //     }
-    // }
+task autoprefixerTest(type: JRubyExec) {
+    description "Execute ruby.rb with gem autoprefixer-rails"
+    script "${projectDir}/src/main/resources/ruby/compile.rb"
 }
-// servers {
-//     server {
-//         id 'github'
-//         username gitHubUsername
-//         password gitHubPassword
-//     }
-// }
-
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            repository(url: "file:///Users/philipp/Workspace/uberall-plugins")
-        }
-    }
-}
-*/
-
 
 task sourcesJar(type: Jar, dependsOn: classes) {
     classifier = 'sources'
