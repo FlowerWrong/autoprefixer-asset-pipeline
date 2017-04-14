@@ -51,14 +51,14 @@ h1 {
                 'last 30 versions',
                 'opera 12',
                 '> 0%'
-            ]]]
+        ]]]
         AutoprefixerProcessor processor = new AutoprefixerProcessor(new AssetCompiler())
         CssAssetFile file = new CssAssetFile()
         file.path = "test.css"
         when:
         def result = processor.process(CSS_INPUT, file)
         then:
-        result == AUTOPREFIXED_OLD_OUTPUT // AUTOPREFIXED_OLD_OUTPUT
+        result == AUTOPREFIXED_OLD_OUTPUT
     }
 
     def "process should do nothing if disabled"() {
@@ -72,37 +72,4 @@ h1 {
         then:
         result == CSS_INPUT
     }
-
-
-    def "call method of the ruby object"(){
-        given:
-        def rubyWrapper = new RubyWrapper('compile')
-        when:
-        def res = rubyWrapper.exec(CSS_INPUT).asJavaString()
-        then:
-        res == AUTOPREFIXED_OUTPUT
-    }
-
-
-    // def "call method of the ruby object with >1% and ie 10 browsers"(){
-    //     given:
-    //     def rubyWrapper = new RubyWrapper('compile')
-    //     when:
-    //     def res = rubyWrapper.exec(CSS_INPUT, "ie 10").asJavaString()
-    //     println(res)
-    //     then:
-    //     res == AUTOPREFIXED_OUTPUT
-    // }
-    //
-    //
-    // def "call method of the ruby object with last 30 versions browsers"(){
-    //     given:
-    //     def rubyWrapper = new RubyWrapper('compile')
-    //     when:
-    //     def res = rubyWrapper.exec(CSS_INPUT, "last 30 versions").asJavaString()
-    //     println(res)
-    //     then:
-    //     res == AUTOPREFIXED_OUTPUT
-    // }
-
 }

@@ -1,6 +1,8 @@
 # autoprefixer-asset-pipeline
 Adds css autoprefixing to [Asset-Pipeline](https://github.com/bertramdev/asset-pipeline-core/) using [Autoprefixer](https://github.com/postcss/autoprefixer)
 
+* [package gems to jruby-complete.jar](https://github.com/watkyn/jruby-gems-jar)
+
 # configuration
 there is currently 2 configuration options
 ```

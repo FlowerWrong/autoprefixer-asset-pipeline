@@ -17,24 +17,11 @@ class AutoprefixerProcessor extends AbstractProcessor {
     Scriptable globalScope
     ClassLoader classLoader
 
-    def rubyWrapper
-
     boolean enabled = true
     def browsers
 
     AutoprefixerProcessor(AssetCompiler precompiler) {
         super(precompiler)
-
-        try {
-          rubyWrapper = new RubyWrapper('compile')
-        } catch (Exception e) {
-            throw new Exception("Autoprefixer rubyWrapper initialization failed.", e)
-        } finally {
-            try {
-                Context.exit()
-            } catch (IllegalStateException e) {
-            }
-        }
 
         if (config?.enabled == false) {
             log.info 'Disabling Autoprefixer'
@@ -57,10 +44,10 @@ class AutoprefixerProcessor extends AbstractProcessor {
 
             cx.setOptimizationLevel(-1)
             globalScope = cx.initStandardObjects()
-            // this.evaluateJavascript(cx, shellJsResource)
-            // this.evaluateJavascript(cx, envRhinoJsResource)
-            // this.evaluateJavascript(cx, autoprefixerJsResource)
-            // this.evaluateJavascript(cx, compileJsResource)
+            this.evaluateJavascript(cx, shellJsResource)
+            this.evaluateJavascript(cx, envRhinoJsResource)
+            this.evaluateJavascript(cx, autoprefixerJsResource)
+            this.evaluateJavascript(cx, compileJsResource)
         } catch (Exception e) {
             throw new Exception("Autoprefixer initialization failed.", e)
         } finally {
@@ -72,7 +59,6 @@ class AutoprefixerProcessor extends AbstractProcessor {
     }
 
     def evaluateJavascript(context, resource) {
-        // def inputStream = resource.inputStream
         context.evaluateString globalScope, resource.getText('UTF-8'), resource.file, 1, null
     }
 
@@ -85,12 +71,10 @@ class AutoprefixerProcessor extends AbstractProcessor {
             def compileScope = cx.newObject(globalScope)
             compileScope.setParentScope(globalScope)
             compileScope.put('cssSourceContent', compileScope, input)
+            compileScope.put('browsers', compileScope, browsers)
 
-            // def result = cx.evaluateString(compileScope, "compile(cssSourceContent)", 'Autoprefix command', 0, null)
-
-            def res = rubyWrapper.exec(input, browsers).asJavaString()
-
-            return res
+            def res = cx.evaluateString(compileScope, "compile(cssSourceContent, browsers)", 'Autoprefix command', 0, null)
+            return cx.toString(res)
         } catch (JavaScriptException e) {
             NativeObject errorMeta = (NativeObject) e.value
 

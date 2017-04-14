@@ -1,19 +1,5 @@
-var compile = function (fileText, paths) {
+var compile = function (fileText, browsers, paths) {
     var me = this;
     globalPaths = paths;
-
-    var outputCss = autoprefixer.process(fileText, {browsers: ['> 1%', 'ie 10']}).css;
-
-    return outputCss;
+    return autoprefixer.process(fileText, {browsers: JSON.parse(browsers)}).css;
 };
-
-// var processor;
-// var process = function(fileText, paths) {
-//     var result = autoprefixer.process.apply(autoprefixer, arguments);
-//     var warns  = result.warnings().map(function (i) {
-//         delete i.plugin;
-//         return i.toString();
-//     });
-//     var map = result.map ? result.map.toString() : null;
-//     return { css: result.css, map: map, warnings: warns };
-// };
