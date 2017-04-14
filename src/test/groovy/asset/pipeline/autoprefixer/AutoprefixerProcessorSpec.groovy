@@ -36,6 +36,9 @@ h1 {
     // https://autoprefixer.github.io/
     def "process should work"() {
         given:
+        AssetPipelineConfigHolder.config = [autoprefixer: [
+            map: false
+        ]]
         AutoprefixerProcessor processor = new AutoprefixerProcessor(new AssetCompiler())
         CssAssetFile file = new CssAssetFile()
         file.path = "test.css"
@@ -47,11 +50,15 @@ h1 {
 
     def "browser array should be respected"() {
         given:
-        AssetPipelineConfigHolder.config = [autoprefixer: [browsers: [
+        AssetPipelineConfigHolder.config = [autoprefixer: [
+            enabled: true,
+            browsers: [
                 'last 30 versions',
                 'opera 12',
                 '> 0%'
-        ]]]
+            ],
+            map: false
+        ]]
         AutoprefixerProcessor processor = new AutoprefixerProcessor(new AssetCompiler())
         CssAssetFile file = new CssAssetFile()
         file.path = "test.css"
@@ -63,6 +70,9 @@ h1 {
 
     def "process should do nothing if disabled"() {
         given:
+        AssetPipelineConfigHolder.config = [autoprefixer: [
+            map: false
+        ]]
         AssetPipelineConfigHolder.config = [autoprefixer: [enabled: false]]
         AutoprefixerProcessor processor = new AutoprefixerProcessor(new AssetCompiler())
         CssAssetFile file = new CssAssetFile()

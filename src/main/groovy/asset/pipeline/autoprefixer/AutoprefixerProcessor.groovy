@@ -18,6 +18,7 @@ class AutoprefixerProcessor extends AbstractProcessor {
     ClassLoader classLoader
 
     boolean enabled = true
+    boolean map = true
     def browsers
 
     AutoprefixerProcessor(AssetCompiler precompiler) {
@@ -27,6 +28,10 @@ class AutoprefixerProcessor extends AbstractProcessor {
             log.info 'Disabling Autoprefixer'
             enabled = false
             return
+        }
+
+        if (config?.map == false) {
+            map = false
         }
 
         if (config?.browsers) {
@@ -72,8 +77,9 @@ class AutoprefixerProcessor extends AbstractProcessor {
             compileScope.setParentScope(globalScope)
             compileScope.put('cssSourceContent', compileScope, input)
             compileScope.put('browsers', compileScope, browsers)
+            compileScope.put('map', compileScope, map)
 
-            def res = cx.evaluateString(compileScope, "compile(cssSourceContent, browsers)", 'Autoprefix command', 0, null)
+            def res = cx.evaluateString(compileScope, "compile(cssSourceContent, browsers, map)", 'Autoprefix command', 0, null)
             return cx.toString(res)
         } catch (JavaScriptException e) {
             NativeObject errorMeta = (NativeObject) e.value
